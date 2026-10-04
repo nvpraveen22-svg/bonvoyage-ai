@@ -22,10 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  DestinationAutocomplete,
-  type DestinationSuggestion,
-} from "@/components/destination-autocomplete";
+import { DestinationAutocomplete } from "@/components/destination-autocomplete";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +91,12 @@ export default function AdminPage() {
 
   const [name, setName] = useState("");
   const [state, setState] = useState("");
-  const [nameExists, setNameExists] = useState(false);
+  const [placeSuggestions, setPlaceSuggestions] = useState<
+    { name: string; fullName: string; placeId: string }[]
+  >([]);
+  const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
+  const placesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const placesQueryRef = useRef("");
   const [building, setBuilding] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [result, setResult] = useState<BuildResult | null>(null);
@@ -227,24 +229,49 @@ export default function AdminPage() {
     }
   }
 
+  // Google Places knows about hill stations, villages, and other places our
+  // own `destinations` table doesn't have rows for yet - that's the whole
+  // point here, so (unlike the old Supabase-backed lookup this replaces)
+  // there's no local "already exists" pre-check. The build route itself
+  // still rejects an actual duplicate slug with a 409 on submit.
   function handleNameChange(value: string) {
     setName(value);
-    setNameExists(false);
+    setShowPlaceSuggestions(true);
+
+    if (placesDebounceRef.current) clearTimeout(placesDebounceRef.current);
+
+    const query = value.trim();
+    placesQueryRef.current = query;
+    if (query.length < 2) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    placesDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/admin/places-autocomplete?input=${encodeURIComponent(query)}`,
+          { headers: { "x-admin-pin": pin } }
+        );
+        const data = await res.json();
+        // A slower, now-stale request can resolve after a later keystroke's
+        // - only apply it if it's still answering the latest query.
+        if (placesQueryRef.current !== query) return;
+        setPlaceSuggestions(data.suggestions ?? []);
+      } catch {
+        if (placesQueryRef.current === query) setPlaceSuggestions([]);
+      }
+    }, 300);
   }
 
-  function handleSelectExisting(destination: DestinationSuggestion) {
-    setName(destination.name);
-    setState(destination.state);
-    setNameExists(true);
-  }
-
-  function handleSelectNew(value: string) {
-    setName(value);
-    setNameExists(false);
+  function handleSelectPlace(suggestion: { name: string; fullName: string; placeId: string }) {
+    setName(suggestion.name);
+    setShowPlaceSuggestions(false);
+    setPlaceSuggestions([]);
   }
 
   async function handleBuild() {
-    if (!name.trim() || building || nameExists) return;
+    if (!name.trim() || building) return;
 
     setBuilding(true);
     setBuildError(null);
@@ -384,20 +411,34 @@ export default function AdminPage() {
         <CardContent className="flex flex-col gap-3 pt-1">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="dest-name">Destination name</Label>
-            <DestinationAutocomplete
-              id="dest-name"
-              value={name}
-              onChange={handleNameChange}
-              onSelectExisting={handleSelectExisting}
-              onSelectNew={handleSelectNew}
-              placeholder="e.g. Hampi"
-              disabled={building}
-            />
-            {nameExists && (
-              <Badge className="w-fit gap-1 border-transparent bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                Already exists ✓
-              </Badge>
-            )}
+            <div className="relative" style={{ isolation: "isolate" }}>
+              <Input
+                id="dest-name"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onFocus={() => setShowPlaceSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowPlaceSuggestions(false), 150)}
+                onKeyDown={(e) => e.key === "Escape" && setShowPlaceSuggestions(false)}
+                placeholder="Search any destination in India..."
+                autoComplete="off"
+                disabled={building}
+                className="w-full"
+              />
+              {showPlaceSuggestions && placeSuggestions.length > 0 && (
+                <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-background shadow-lg">
+                  {placeSuggestions.map((s) => (
+                    <li
+                      key={s.placeId}
+                      onMouseDown={() => handleSelectPlace(s)}
+                      className="cursor-pointer px-3 py-2 text-sm hover:bg-accent"
+                    >
+                      <span className="font-medium text-foreground">{s.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{s.fullName}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="dest-state">State (optional — AI will infer)</Label>
@@ -411,7 +452,7 @@ export default function AdminPage() {
           </div>
           <Button
             onClick={handleBuild}
-            disabled={!name.trim() || building || nameExists}
+            disabled={!name.trim() || building}
             className="gap-1.5"
           >
             {building ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
