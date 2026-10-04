@@ -9,8 +9,8 @@ import {
 import type { AiInsightsContent } from "@/types";
 
 export const runtime = "nodejs";
-// generateContentWithRetry's worst case is ~310s (6 retries, each capped at
-// 20s, plus ~170s of backoff sleep) before giving up — well over the
+// generateContentWithRetry's worst case is ~101s (4 attempts, each capped at
+// 20s, plus 21s of backoff sleep) before giving up — well over the
 // platform default.
 export const maxDuration = 300;
 

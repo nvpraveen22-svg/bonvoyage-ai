@@ -4,7 +4,7 @@ import {
   type GenerativeModel,
 } from "@google/generative-ai";
 
-const RETRY_DELAYS_MS = [5000, 10000, 20000, 30000, 45000, 60000];
+const RETRY_DELAYS_MS = [3000, 6000, 12000];
 
 // Confirmed live 2026-09-22: a hung/overloaded Gemini request can sit with
 // zero bytes back for 90s+ with no error at all (not even a slow 503) — so
@@ -66,17 +66,17 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Calls model.generateContent(prompt), retrying on 503/overload/timeout
- * errors with exponential backoff (5s, 10s, 20s, 30s, 45s, 60s — 6 retries,
- * ~170s of sleep total). Each individual attempt is capped at
- * PER_ATTEMPT_TIMEOUT_MS so a hung request can't silently consume the whole
- * budget on its own. Non-retryable errors are rethrown as-is. If all
- * retries are exhausted, throws GeminiOverloadedError with the last error
- * attached as `cause`.
+ * errors with exponential backoff (3s, 6s, 12s — 3 retries, 21s of sleep
+ * total). Each individual attempt is capped at PER_ATTEMPT_TIMEOUT_MS so a
+ * hung request can't silently consume the whole budget on its own.
+ * Non-retryable errors are rethrown as-is. If all retries are exhausted,
+ * throws GeminiOverloadedError with the last error attached as `cause`.
  *
  * Callers with a route-level timeout must give this enough headroom: worst
  * case is (RETRY_DELAYS_MS.length + 1) * PER_ATTEMPT_TIMEOUT_MS of attempt
- * time, plus RETRY_DELAYS_MS's ~170s of sleep, plus whatever the caller does
- * afterward — see maxDuration on the routes that use this.
+ * time (4 attempts * 20s = 80s), plus RETRY_DELAYS_MS's 21s of sleep, plus
+ * whatever the caller does afterward — ~101s total. See maxDuration on the
+ * routes that use this.
  */
 export async function generateContentWithRetry(
   model: GenerativeModel,

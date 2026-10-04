@@ -21,14 +21,12 @@ function sleep(ms: number) {
 export const runtime = "nodejs";
 // The foundation call and the 5 section calls below run as: one sequential
 // call, then all 5 concurrently. That makes the *typical* run roughly
-// 2 Gemini calls deep instead of 6 sequential ones. It does NOT lower the
-// *worst* case below 300s on its own: generateContentWithRetry's own worst
-// case is ~310s per call (see gemini-with-retry.ts), and that budget applies
-// per call regardless of how many run concurrently — if the foundation call
-// (which must finish before the others start) alone hits its full retry
-// budget, this handler is already past 300s before the parallel section
-// even begins. Running sections concurrently buys headroom for the common
-// case; it doesn't change what a single genuinely-stuck call costs.
+// 2 Gemini calls deep instead of 6 sequential ones. generateContentWithRetry's
+// own worst case is ~101s per call (see gemini-with-retry.ts): 4 attempts at
+// 20s each plus 21s of backoff sleep. Worst case here is foundation (~101s,
+// sequential) + the slowest parallel section (~101s, concurrent with the
+// other 4) = ~202s, comfortably inside the 300s budget below with headroom
+// for the DB inserts and photo sync that follow.
 export const maxDuration = 300;
 
 // gemini-2.0-flash is retired for this API key; gemini-3.6-flash is the
