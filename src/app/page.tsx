@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { TravelAssistant } from "@/components/travel-assistant";
 
 export default function Home() {
   const router = useRouter();
@@ -195,6 +196,19 @@ export default function Home() {
             </div>
           </section>
         )}
+
+        <section className="mx-auto flex w-full max-w-2xl flex-col gap-2 py-4">
+          <div className="flex items-center gap-1.5 text-secondary">
+            <Compass className="size-4" />
+            <span className="text-xs font-medium uppercase tracking-wide">
+              Ask AI travel assistant
+            </span>
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">
+            🧭 Have a travel question?
+          </h2>
+          <TravelAssistant />
+        </section>
       </main>
     </div>
   );
