@@ -296,7 +296,10 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
       <div
         className={cn(
           "flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl transition-all duration-300",
-          floating && "hidden md:flex fixed bottom-24 right-6 z-50 max-h-[70vh] w-96",
+          floating && "hidden md:flex fixed z-50",
+          floating && (expanded
+            ? "bottom-0 right-0 h-[85vh] w-full max-w-2xl rounded-b-none"
+            : "bottom-24 right-6 max-h-[70vh] w-96"),
           floating && (desktopOpen ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0")
         )}
       >
