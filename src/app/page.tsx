@@ -204,10 +204,11 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Floating AI Assistant - right side */}
-      <div className="fixed bottom-6 right-4 z-50 hidden w-80 md:block">
-        <TravelAssistant />
-      </div>
+      {/* Floating AI Assistant - right side. No wrapper div here: the
+          component owns its own fixed position/size (including the
+          expanded/fullscreen state), since a plain wrapper can't react to
+          state that lives inside its child. */}
+      <TravelAssistant floating />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, ChevronDown, ChevronUp, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -62,7 +62,16 @@ const SUGGESTIONS = [
 const GREETING =
   "Hi! I'm your TripSense AI travel assistant 🧭 Ask me anything — nearby destinations, hidden gems, family trips, restaurants, hotels — I'll help you plan the perfect trip!";
 
-export function TravelAssistant() {
+interface TravelAssistantProps {
+  // True for the fixed bottom-right widget on desktop (src/app/page.tsx),
+  // which owns its own position/size/expand chrome; false (default) for the
+  // plain inline card rendered on mobile, which just fills its container -
+  // there's nothing to "float" or "expand into" on a small screen, hence the
+  // expand button itself only ever renders for the floating instance.
+  floating?: boolean;
+}
+
+export function TravelAssistant({ floating = false }: TravelAssistantProps = {}) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: GREETING },
   ]);
@@ -70,6 +79,7 @@ export function TravelAssistant() {
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -133,7 +143,20 @@ export function TravelAssistant() {
   }
 
   return (
-    <div className="flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+    <div
+      className={cn(
+        "flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+        // The floating instance owns its own positioning (fixed/size/z-index)
+        // instead of a wrapper div doing it, since those now need to change
+        // with `expanded` - a parent wrapper can't react to this component's
+        // own state. `hidden md:flex` keeps it off mobile entirely (display:
+        // none makes the unprefixed position/size below irrelevant there);
+        // `md:flex` (not md:block) because this div is already a flex column
+        // for its own header/body/footer internally.
+        floating && "hidden md:flex fixed z-50 transition-all duration-300",
+        floating && (expanded ? "bottom-0 right-0 h-[85vh] w-full max-w-2xl" : "bottom-6 right-4 w-80")
+      )}
+    >
       {/* Orange -> pink rather than the app's primary/secondary (orange/green)
           tokens: those are complementary hues and muddy to brown mid-gradient,
           which only shows up clearly on a wide solid band like this header. */}
@@ -149,18 +172,36 @@ export function TravelAssistant() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? "Expand chat" : "Collapse chat"}
-          className="shrink-0 rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
-        >
-          {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {floating && (
+            <button
+              onClick={() => {
+                // Expanding from the collapsed (header-only) state should
+                // show the panel too, rather than expand into an invisible
+                // body - collapsed+expanded together would be a pointless,
+                // confusing combination to allow.
+                setCollapsed(false);
+                setExpanded((e) => !e);
+              }}
+              aria-label={expanded ? "Exit fullscreen" : "Expand to fullscreen"}
+              className="hidden rounded-full p-1 text-white/90 transition-colors hover:bg-white/20 md:flex"
+            >
+              {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+          )}
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            aria-label={collapsed ? "Expand chat" : "Collapse chat"}
+            className="rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
+          >
+            {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
+          </button>
+        </div>
       </div>
 
       {!collapsed && (
         <>
-          <div className="max-h-64 space-y-3 overflow-y-auto p-4">
+          <div className={cn("space-y-3 overflow-y-auto p-4", expanded ? "flex-1" : "max-h-64")}>
             {messages.map((msg, i) => (
               <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                 <div
