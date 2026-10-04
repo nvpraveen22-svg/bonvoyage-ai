@@ -11,7 +11,7 @@ import type { Temple } from "@/types";
 export const runtime = "nodejs";
 // generateContentWithRetry's worst case is ~310s (6 retries, each capped at
 // 20s, plus ~170s of backoff sleep) before giving up — well over the old 30s.
-export const maxDuration = 400;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 // generateContentWithRetry's worst case is ~310s (6 retries, each capped at
 // 20s, plus ~170s of backoff sleep) before giving up — well over the
 // platform default.
-export const maxDuration = 400;
+export const maxDuration = 300;
 
 const MODEL_NAME = "gemini-3.6-flash";
 

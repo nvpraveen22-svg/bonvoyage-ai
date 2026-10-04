@@ -19,7 +19,7 @@ export const runtime = "nodejs";
 // Places + Unsplash, one request per attraction/temple at a 600ms pace) now
 // runs inline after that so its counts can be reported in the response —
 // give this generous headroom for both.
-export const maxDuration = 480;
+export const maxDuration = 300;
 
 // gemini-2.0-flash is retired for this API key; gemini-3.6-flash is the
 // model already proven working across this project's Gemini routes.
