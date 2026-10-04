@@ -197,15 +197,12 @@ export default function Home() {
           </section>
         )}
 
-        {/* Desktop gets the assistant as a floating panel (below); on mobile
-            there's no room to float it, so it stays inline at the bottom. */}
-        <div className="md:hidden">
-          <TravelAssistant />
-        </div>
       </main>
 
-      {/* Floating AI Assistant - right side. No wrapper div here: the
-          component owns its own fixed position/size (including the
+      {/* AI Assistant: on mobile this renders its own floating bubble +
+          full-screen bottom sheet (no wrapper needed here); on desktop,
+          the fixed bottom-right panel. No wrapper div either way: the
+          component owns all of its own fixed position/size (including the
           expanded/fullscreen state), since a plain wrapper can't react to
           state that lives inside its child. */}
       <TravelAssistant floating />

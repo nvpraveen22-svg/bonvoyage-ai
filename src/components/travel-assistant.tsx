@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Send, ChevronDown, ChevronUp, Maximize2, Minimize2 } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Send, ChevronDown, ChevronUp, Maximize2, Minimize2, MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -62,12 +62,109 @@ const SUGGESTIONS = [
 const GREETING =
   "Hi! I'm your TripSense AI travel assistant 🧭 Ask me anything — nearby destinations, hidden gems, family trips, restaurants, hotels — I'll help you plan the perfect trip!";
 
+interface ChatBodyProps {
+  messages: Message[];
+  loading: boolean;
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: (text: string) => void;
+  bottomRef: RefObject<HTMLDivElement>;
+  messagesAreaClassName?: string;
+  inputRowClassName?: string;
+}
+
+// Shared by both the desktop floating panel and the mobile bottom sheet
+// below, so the two can't drift out of sync - same message bubbles, same
+// suggestions, same input row, just wrapped in different shells (and each
+// given its own bottomRef: both shells are mounted at once, CSS-toggled by
+// breakpoint rather than conditionally rendered, so a single shared ref
+// would only ever point at whichever one rendered last).
+function ChatBody({
+  messages,
+  loading,
+  input,
+  onInputChange,
+  onSend,
+  bottomRef,
+  messagesAreaClassName,
+  inputRowClassName,
+}: ChatBodyProps) {
+  return (
+    <>
+      <div className={cn("space-y-3 overflow-y-auto p-4", messagesAreaClassName)}>
+        {messages.map((msg, i) => (
+          <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+            <div
+              className={cn(
+                "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                msg.role === "user"
+                  ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
+                  : "rounded-bl-sm bg-muted text-foreground"
+              )}
+            >
+              {msg.role === "assistant" ? <MarkdownText text={msg.text} /> : msg.text}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-2">
+              <div className="flex gap-1">
+                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "0ms" }} />
+                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "150ms" }} />
+                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {messages.length === 1 && (
+        <div className="flex flex-wrap gap-2 px-4 pb-2">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => onSend(s)}
+              className="rounded-full border border-border bg-accent px-3 py-1 text-xs text-accent-foreground transition-colors hover:bg-accent/70"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className={cn("flex gap-2 border-t border-border p-3", inputRowClassName)}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onSend(input)}
+          placeholder="Ask about destinations, hotels, restaurants..."
+          aria-label="Ask a travel question"
+          disabled={loading}
+          className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
+        />
+        <button
+          onClick={() => onSend(input)}
+          disabled={loading || !input.trim()}
+          aria-label="Send message"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+        >
+          <Send className="size-4" />
+        </button>
+      </div>
+    </>
+  );
+}
+
 interface TravelAssistantProps {
-  // True for the fixed bottom-right widget on desktop (src/app/page.tsx),
-  // which owns its own position/size/expand chrome; false (default) for the
-  // plain inline card rendered on mobile, which just fills its container -
-  // there's nothing to "float" or "expand into" on a small screen, hence the
-  // expand button itself only ever renders for the floating instance.
+  // True for the fixed bottom-right widget on desktop (src/app/page.tsx).
+  // Mobile no longer has a plain non-floating mode - below md this component
+  // always renders as the floating bubble + bottom sheet further down,
+  // regardless of this prop - so in practice this is always true at the
+  // component's one remaining call site, kept only because the desktop
+  // panel's own positioning/expand chrome stays gated on it unchanged.
   floating?: boolean;
 }
 
@@ -80,13 +177,19 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
   const [userLocation, setUserLocation] = useState("");
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const desktopBottomRef = useRef<HTMLDivElement>(null);
+  const sheetBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Also re-run on collapsed: the message list unmounts while collapsed
-    // (see the early return below), so re-expanding needs to jump back to
-    // the bottom rather than land wherever a fresh mount defaults to.
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Also re-run on collapsed: the desktop message list unmounts while
+    // collapsed (see the early return below), so re-expanding needs to jump
+    // back to the bottom rather than land wherever a fresh mount defaults
+    // to. The mobile sheet never unmounts (it's translated off-screen
+    // instead, for the slide transition), so this is a harmless extra call
+    // for it, but keeps both in sync on every change regardless.
+    desktopBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    sheetBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, collapsed]);
 
   // Best-effort: detect the visitor's city via browser geolocation, then
@@ -142,130 +245,159 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
     }
   }
 
+  const headerTitle = (
+    <div className="flex items-center gap-3">
+      <span className="text-2xl">🧭</span>
+      <div>
+        <h3 className="font-heading font-semibold text-white">
+          TripSense AI Assistant
+        </h3>
+        <p className="text-xs text-white/80">
+          {userLocation ? `📍 Detected: ${userLocation}` : "Ask me anything about travel in India"}
+        </p>
+      </div>
+    </div>
+  );
+
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
-        // The floating instance owns its own positioning (fixed/size/z-index)
-        // instead of a wrapper div doing it, since those now need to change
-        // with `expanded` - a parent wrapper can't react to this component's
-        // own state. `hidden md:flex` keeps it off mobile entirely (display:
-        // none makes the unprefixed position/size below irrelevant there);
-        // `md:flex` (not md:block) because this div is already a flex column
-        // for its own header/body/footer internally.
-        floating && "hidden md:flex fixed z-50 transition-all duration-300",
-        floating && (expanded ? "bottom-0 right-0 h-[85vh] w-full max-w-2xl" : "bottom-6 right-4 w-80")
-      )}
-    >
-      {/* Orange -> pink rather than the app's primary/secondary (orange/green)
-          tokens: those are complementary hues and muddy to brown mid-gradient,
-          which only shows up clearly on a wide solid band like this header. */}
-      <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🧭</span>
-          <div>
-            <h3 className="font-heading font-semibold text-white">
-              TripSense AI Assistant
-            </h3>
-            <p className="text-xs text-white/80">
-              {userLocation ? `📍 Detected: ${userLocation}` : "Ask me anything about travel in India"}
-            </p>
+    <>
+      {/* Desktop floating panel - unchanged. */}
+      <div
+        className={cn(
+          "flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+          // The floating instance owns its own positioning (fixed/size/z-index)
+          // instead of a wrapper div doing it, since those now need to change
+          // with `expanded` - a parent wrapper can't react to this component's
+          // own state. `hidden md:flex` keeps it off mobile entirely (display:
+          // none makes the unprefixed position/size below irrelevant there);
+          // `md:flex` (not md:block) because this div is already a flex column
+          // for its own header/body/footer internally.
+          floating && "hidden md:flex fixed z-50 transition-all duration-300",
+          floating && (expanded ? "bottom-0 right-0 h-[85vh] w-full max-w-2xl" : "bottom-6 right-4 w-80")
+        )}
+      >
+        {/* Orange -> pink rather than the app's primary/secondary (orange/green)
+            tokens: those are complementary hues and muddy to brown mid-gradient,
+            which only shows up clearly on a wide solid band like this header. */}
+        <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
+          {headerTitle}
+          <div className="flex shrink-0 items-center gap-1">
+            {floating && (
+              <button
+                onClick={() => {
+                  // Expanding from the collapsed (header-only) state should
+                  // show the panel too, rather than expand into an invisible
+                  // body - collapsed+expanded together would be a pointless,
+                  // confusing combination to allow.
+                  setCollapsed(false);
+                  setExpanded((e) => !e);
+                }}
+                aria-label={expanded ? "Exit fullscreen" : "Expand to fullscreen"}
+                className="hidden rounded-full p-1 text-white/90 transition-colors hover:bg-white/20 md:flex"
+              >
+                {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
+            )}
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? "Expand chat" : "Collapse chat"}
+              className="rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
+            >
+              {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
+            </button>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {floating && (
-            <button
-              onClick={() => {
-                // Expanding from the collapsed (header-only) state should
-                // show the panel too, rather than expand into an invisible
-                // body - collapsed+expanded together would be a pointless,
-                // confusing combination to allow.
-                setCollapsed(false);
-                setExpanded((e) => !e);
-              }}
-              aria-label={expanded ? "Exit fullscreen" : "Expand to fullscreen"}
-              className="hidden rounded-full p-1 text-white/90 transition-colors hover:bg-white/20 md:flex"
-            >
-              {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-            </button>
-          )}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand chat" : "Collapse chat"}
-            className="rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
-          >
-            {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
-          </button>
-        </div>
+
+        {!collapsed && (
+          <ChatBody
+            messages={messages}
+            loading={loading}
+            input={input}
+            onInputChange={setInput}
+            onSend={sendMessage}
+            bottomRef={desktopBottomRef}
+            messagesAreaClassName={expanded ? "flex-1" : "max-h-64"}
+          />
+        )}
       </div>
 
-      {!collapsed && (
-        <>
-          <div className={cn("space-y-3 overflow-y-auto p-4", expanded ? "flex-1" : "max-h-64")}>
-            {messages.map((msg, i) => (
-              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                <div
-                  className={cn(
-                    "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
-                    msg.role === "user"
-                      ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
-                      : "rounded-bl-sm bg-muted text-foreground"
-                  )}
-                >
-                  {msg.role === "assistant" ? <MarkdownText text={msg.text} /> : msg.text}
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-2">
-                  <div className="flex gap-1">
-                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "0ms" }} />
-                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "150ms" }} />
-                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          {messages.length === 1 && (
-            <div className="flex flex-wrap gap-2 px-4 pb-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendMessage(s)}
-                  className="rounded-full border border-border bg-accent px-3 py-1 text-xs text-accent-foreground transition-colors hover:bg-accent/70"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex gap-2 border-t border-border p-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-              placeholder="Ask about destinations, hotels, restaurants..."
-              aria-label="Ask a travel question"
-              disabled={loading}
-              className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
-            />
-            <button
-              onClick={() => sendMessage(input)}
-              disabled={loading || !input.trim()}
-              aria-label="Send message"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
-              <Send className="size-4" />
-            </button>
-          </div>
-        </>
+      {/* Mobile: backdrop behind the bottom sheet, dismisses it on tap. */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
       )}
-    </div>
+
+      {/* Mobile: full-screen bottom sheet. Always mounted (not conditional
+          on `open`) so the slide-up/down is an actual transition rather than
+          a mount/unmount cut. */}
+      <div
+        className={cn(
+          "fixed inset-0 z-50 flex flex-col bg-background transition-transform duration-300 md:hidden",
+          open ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3",
+            // Extra top inset for phones with a notch/status bar, since this
+            // sheet covers the full viewport including that area - not asked
+            // for explicitly, but the same concern as the input row's bottom
+            // safe-area padding below, just at the other edge.
+            "pt-[max(0.75rem,env(safe-area-inset-top))]"
+          )}
+        >
+          {headerTitle}
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Close chat"
+            className="shrink-0 rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+        <ChatBody
+          messages={messages}
+          loading={loading}
+          input={input}
+          onInputChange={setInput}
+          onSend={sendMessage}
+          bottomRef={sheetBottomRef}
+          messagesAreaClassName="flex-1"
+          inputRowClassName="pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        />
+      </div>
+
+      {/* Mobile: floating bubble. Rendered last so its z-50 paints above the
+          sheet's equal z-50 (same-index ties resolve by DOM order) - it
+          doubles as the sheet's close button once open, so it needs to stay
+          clickable on top of the sheet rather than sit under it. */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "Close chat" : "Open AI travel assistant"}
+        className="fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg md:hidden"
+      >
+        {open ? (
+          <X className="size-6 text-white" />
+        ) : (
+          <>
+            <MessageCircle className="size-6 text-white" />
+            {/* Ping dot to draw a first-time visitor's attention - only
+                while closed, since pinging an already-open chat is pointless. */}
+            {/* right-2 top-2 (not right-0 top-0): on a rounded-full button, the
+                box corner sits outside the visible circular face - a circle
+                doesn't reach its own bounding-box corners - so a dot placed
+                there mostly overlapped the page background instead of the
+                gradient, and all but disappeared against this pale page. */}
+            <span className="absolute right-2 top-2 flex size-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex size-3 rounded-full bg-white" />
+            </span>
+          </>
+        )}
+      </button>
+    </>
   );
 }
