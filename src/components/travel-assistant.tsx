@@ -9,6 +9,49 @@ interface Message {
   text: string;
 }
 
+// Gemini's replies use plain-text markdown (**bold**, "* " bullets) per the
+// prompt in src/app/api/travel-assistant/route.ts, but were rendering as
+// literal asterisks since the bubble just dumped msg.text as text. This is a
+// small hand-rolled renderer rather than a markdown library for the couple
+// of constructs that actually show up, given the system prompt doesn't ask
+// for anything richer (headings, links, numbered lists, code).
+//
+// Safe against injected HTML/script: renderInline escapes &/</> on the raw
+// line *before* turning **/* into tags, so dangerouslySetInnerHTML only ever
+// sees entities plus the <strong>/<em> this function added itself - there's
+// no way for a crafted chat message (or a prompt-injected Gemini reply) to
+// get a real tag through.
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <div className="flex flex-col gap-1">
+      {lines.map((line, i) => {
+        const bulletMatch = line.match(/^(\s*)\*\s+(.+)$/);
+        if (bulletMatch) {
+          const indent = bulletMatch[1].length > 0;
+          return (
+            <div key={i} className={cn("flex gap-1.5", indent && "pl-4")}>
+              <span className="mt-1 size-1.5 shrink-0 rounded-full bg-current opacity-60" />
+              <span dangerouslySetInnerHTML={{ __html: renderInline(bulletMatch[2]) }} />
+            </div>
+          );
+        }
+        if (!line.trim()) return <div key={i} className="h-1" />;
+        return <p key={i} dangerouslySetInnerHTML={{ __html: renderInline(line) }} />;
+      })}
+    </div>
+  );
+}
+
+function renderInline(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+}
+
 const SUGGESTIONS = [
   "Places near Hyderabad within 150km for a day trip",
   "Best family destinations in Kerala with less crowd",
@@ -107,13 +150,13 @@ export function TravelAssistant() {
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             <div
               className={cn(
-                "max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm",
+                "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
                 msg.role === "user"
-                  ? "rounded-br-sm bg-primary text-primary-foreground"
+                  ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
                   : "rounded-bl-sm bg-muted text-foreground"
               )}
             >
-              {msg.text}
+              {msg.role === "assistant" ? <MarkdownText text={msg.text} /> : msg.text}
             </div>
           </div>
         ))}
