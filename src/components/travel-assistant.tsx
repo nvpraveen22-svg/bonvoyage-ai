@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Send, ChevronDown, MessageCircle, X } from "lucide-react";
+import { Send, ChevronDown, Maximize2, Minimize2, MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -189,6 +189,7 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("");
   const [desktopOpen, setDesktopOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
   const desktopBottomRef = useRef<HTMLDivElement>(null);
   const sheetBottomRef = useRef<HTMLDivElement>(null);
@@ -302,8 +303,15 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
         {/* Orange -> pink rather than the app's primary/secondary (orange/green)
             tokens: those are complementary hues and muddy to brown mid-gradient,
             which only shows up clearly on a wide solid band like this header. */}
-        <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
           {headerTitle}
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            aria-label="Toggle fullscreen"
+            className="text-white/80 hover:text-white transition-colors"
+          >
+            {expanded ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+          </button>
         </div>
 
         <ChatBody
