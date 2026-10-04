@@ -197,19 +197,17 @@ export default function Home() {
           </section>
         )}
 
-        <section className="mx-auto flex w-full max-w-2xl flex-col gap-2 py-4">
-          <div className="flex items-center gap-1.5 text-secondary">
-            <Compass className="size-4" />
-            <span className="text-xs font-medium uppercase tracking-wide">
-              Ask AI travel assistant
-            </span>
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground">
-            🧭 Have a travel question?
-          </h2>
+        {/* Desktop gets the assistant as a floating panel (below); on mobile
+            there's no room to float it, so it stays inline at the bottom. */}
+        <div className="md:hidden">
           <TravelAssistant />
-        </section>
+        </div>
       </main>
+
+      {/* Floating AI Assistant - right side */}
+      <div className="fixed bottom-6 right-4 z-50 hidden w-80 md:block">
+        <TravelAssistant />
+      </div>
     </div>
   );
 }

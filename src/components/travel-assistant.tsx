@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Send, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -69,11 +69,15 @@ export function TravelAssistant() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Also re-run on collapsed: the message list unmounts while collapsed
+    // (see the early return below), so re-expanding needs to jump back to
+    // the bottom rather than land wherever a fresh mount defaults to.
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, collapsed]);
 
   // Best-effort: detect the visitor's city via browser geolocation, then
   // resolve it to a name through our own server route (see
@@ -129,85 +133,98 @@ export function TravelAssistant() {
   }
 
   return (
-    <div className="flex h-[600px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+    <div className="flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
       {/* Orange -> pink rather than the app's primary/secondary (orange/green)
           tokens: those are complementary hues and muddy to brown mid-gradient,
           which only shows up clearly on a wide solid band like this header. */}
-      <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
-        <span className="text-2xl">🧭</span>
-        <div>
-          <h3 className="font-heading font-semibold text-white">
-            TripSense AI Assistant
-          </h3>
-          <p className="text-xs text-white/80">
-            {userLocation ? `📍 Detected: ${userLocation}` : "Ask me anything about travel in India"}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-            <div
-              className={cn(
-                "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
-                msg.role === "user"
-                  ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
-                  : "rounded-bl-sm bg-muted text-foreground"
-              )}
-            >
-              {msg.role === "assistant" ? <MarkdownText text={msg.text} /> : msg.text}
-            </div>
+      <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🧭</span>
+          <div>
+            <h3 className="font-heading font-semibold text-white">
+              TripSense AI Assistant
+            </h3>
+            <p className="text-xs text-white/80">
+              {userLocation ? `📍 Detected: ${userLocation}` : "Ask me anything about travel in India"}
+            </p>
           </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-2">
-              <div className="flex gap-1">
-                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "0ms" }} />
-                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "150ms" }} />
-                <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "300ms" }} />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {messages.length === 1 && (
-        <div className="flex flex-wrap gap-2 px-4 pb-2">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => sendMessage(s)}
-              className="rounded-full border border-border bg-accent px-3 py-1 text-xs text-accent-foreground transition-colors hover:bg-accent/70"
-            >
-              {s}
-            </button>
-          ))}
         </div>
-      )}
-
-      <div className="flex gap-2 border-t border-border p-3">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-          placeholder="Ask about destinations, hotels, restaurants..."
-          aria-label="Ask a travel question"
-          disabled={loading}
-          className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
-        />
         <button
-          onClick={() => sendMessage(input)}
-          disabled={loading || !input.trim()}
-          aria-label="Send message"
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Expand chat" : "Collapse chat"}
+          className="shrink-0 rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
         >
-          <Send className="size-4" />
+          {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
         </button>
       </div>
+
+      {!collapsed && (
+        <>
+          <div className="max-h-64 space-y-3 overflow-y-auto p-4">
+            {messages.map((msg, i) => (
+              <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                    msg.role === "user"
+                      ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
+                      : "rounded-bl-sm bg-muted text-foreground"
+                  )}
+                >
+                  {msg.role === "assistant" ? <MarkdownText text={msg.text} /> : msg.text}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-muted px-4 py-2">
+                  <div className="flex gap-1">
+                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "0ms" }} />
+                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "150ms" }} />
+                    <div className="size-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {messages.length === 1 && (
+            <div className="flex flex-wrap gap-2 px-4 pb-2">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => sendMessage(s)}
+                  className="rounded-full border border-border bg-accent px-3 py-1 text-xs text-accent-foreground transition-colors hover:bg-accent/70"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2 border-t border-border p-3">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
+              placeholder="Ask about destinations, hotels, restaurants..."
+              aria-label="Ask a travel question"
+              disabled={loading}
+              className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={loading || !input.trim()}
+              aria-label="Send message"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            >
+              <Send className="size-4" />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
