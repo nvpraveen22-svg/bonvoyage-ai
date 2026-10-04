@@ -91,7 +91,20 @@ function ChatBody({
 }: ChatBodyProps) {
   return (
     <>
-      <div className={cn("space-y-3 overflow-y-auto p-4", messagesAreaClassName)}>
+      <div
+        className={cn(
+          // min-h-0: a flex child defaults to min-height:auto, which refuses
+          // to shrink below its content's natural height - without this, a
+          // flex-1 message area (the mobile sheet always; the desktop panel
+          // when expanded) can end up taller than its available space rather
+          // than actually clipping+scrolling. overscroll-contain stops a
+          // scroll gesture that reaches the top/bottom from "chaining" into
+          // scrolling the page behind it, a common cause of nested scroll
+          // areas feeling unresponsive on mobile.
+          "min-h-0 space-y-3 overflow-y-auto overscroll-contain p-4",
+          messagesAreaClassName
+        )}
+      >
         {messages.map((msg, i) => (
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             <div
@@ -191,6 +204,21 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
     desktopBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     sheetBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, collapsed]);
+
+  // Lock background scroll while the mobile sheet is open. Without this, a
+  // touch-scroll gesture that reaches the top/bottom of the messages list
+  // (or starts just outside it) can "leak" into scrolling the page behind
+  // the sheet instead - invisible since the sheet covers it, but it eats the
+  // gesture, which reads as "scrolling doesn't work" even though the inner
+  // list itself is perfectly scrollable.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   // Best-effort: detect the visitor's city via browser geolocation, then
   // resolve it to a name through our own server route (see
