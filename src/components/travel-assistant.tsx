@@ -96,9 +96,9 @@ function ChatBody({
           <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             <div
               className={cn(
-                "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                "max-w-[80%] overflow-hidden rounded-2xl px-4 py-2 text-sm",
                 msg.role === "user"
-                  ? "whitespace-pre-wrap rounded-br-sm bg-primary text-primary-foreground"
+                  ? "whitespace-pre-wrap break-words rounded-br-sm bg-primary text-primary-foreground"
                   : "rounded-bl-sm bg-muted text-foreground"
               )}
             >
@@ -376,11 +376,11 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
           clickable on top of the sheet rather than sit under it. */}
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Close chat" : "Open AI travel assistant"}
+        aria-label={open ? "Minimize chat" : "Open AI travel assistant"}
         className="fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg md:hidden"
       >
         {open ? (
-          <X className="size-6 text-white" />
+          <ChevronDown className="size-6 text-white" />
         ) : (
           <>
             <MessageCircle className="size-6 text-white" />
