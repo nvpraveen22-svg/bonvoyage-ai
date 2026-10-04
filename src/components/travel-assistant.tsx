@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Send, ChevronDown, ChevronUp, Maximize2, Minimize2, MessageCircle, X } from "lucide-react";
+import { Send, ChevronDown, MessageCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -177,7 +177,7 @@ interface TravelAssistantProps {
   // always renders as the floating bubble + bottom sheet further down,
   // regardless of this prop - so in practice this is always true at the
   // component's one remaining call site, kept only because the desktop
-  // panel's own positioning/expand chrome stays gated on it unchanged.
+  // bubble/panel's own positioning stays gated on it unchanged.
   floating?: boolean;
 }
 
@@ -188,22 +188,19 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const desktopBottomRef = useRef<HTMLDivElement>(null);
   const sheetBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Also re-run on collapsed: the desktop message list unmounts while
-    // collapsed (see the early return below), so re-expanding needs to jump
-    // back to the bottom rather than land wherever a fresh mount defaults
-    // to. The mobile sheet never unmounts (it's translated off-screen
-    // instead, for the slide transition), so this is a harmless extra call
-    // for it, but keeps both in sync on every change regardless.
+    // Neither the desktop popup nor the mobile sheet unmount when closed -
+    // both scale/translate off instead, so the open/close itself can
+    // animate - so this just needs to re-run on every new message to keep
+    // both scrolled to the latest one.
     desktopBottomRef.current?.scrollIntoView({ behavior: "smooth" });
     sheetBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, collapsed]);
+  }, [messages]);
 
   // Lock background scroll while the mobile sheet is open. Without this, a
   // touch-scroll gesture that reaches the top/bottom of the messages list
@@ -289,65 +286,61 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
 
   return (
     <>
-      {/* Desktop floating panel - unchanged. */}
+      {/* Desktop: popup panel, toggled open/closed by the bubble below.
+          Stays mounted even while closed (scaled/faded out rather than
+          unmounted) so the open/close itself can animate, same pattern as
+          the mobile sheet further down. `hidden md:flex` keeps it off
+          mobile entirely; the bubble is the only desktop-only UI mobile
+          doesn't also get a version of. */}
       <div
         className={cn(
-          "flex flex-col gap-2 overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
-          // The floating instance owns its own positioning (fixed/size/z-index)
-          // instead of a wrapper div doing it, since those now need to change
-          // with `expanded` - a parent wrapper can't react to this component's
-          // own state. `hidden md:flex` keeps it off mobile entirely (display:
-          // none makes the unprefixed position/size below irrelevant there);
-          // `md:flex` (not md:block) because this div is already a flex column
-          // for its own header/body/footer internally.
-          floating && "hidden md:flex fixed z-50 transition-all duration-300",
-          floating && (expanded ? "bottom-0 right-0 h-[85vh] w-full max-w-2xl" : "bottom-6 right-4 w-80")
+          "flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl transition-all duration-300",
+          floating && "hidden md:flex fixed bottom-24 right-6 z-50 max-h-[70vh] w-96",
+          floating && (desktopOpen ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0")
         )}
       >
         {/* Orange -> pink rather than the app's primary/secondary (orange/green)
             tokens: those are complementary hues and muddy to brown mid-gradient,
             which only shows up clearly on a wide solid band like this header. */}
-        <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
+        <div className="flex items-center gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
           {headerTitle}
-          <div className="flex shrink-0 items-center gap-1">
-            {floating && (
-              <button
-                onClick={() => {
-                  // Expanding from the collapsed (header-only) state should
-                  // show the panel too, rather than expand into an invisible
-                  // body - collapsed+expanded together would be a pointless,
-                  // confusing combination to allow.
-                  setCollapsed(false);
-                  setExpanded((e) => !e);
-                }}
-                aria-label={expanded ? "Exit fullscreen" : "Expand to fullscreen"}
-                className="hidden rounded-full p-1 text-white/90 transition-colors hover:bg-white/20 md:flex"
-              >
-                {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-              </button>
-            )}
-            <button
-              onClick={() => setCollapsed((c) => !c)}
-              aria-label={collapsed ? "Expand chat" : "Collapse chat"}
-              className="rounded-full p-1 text-white/90 transition-colors hover:bg-white/20"
-            >
-              {collapsed ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
-            </button>
-          </div>
         </div>
 
-        {!collapsed && (
-          <ChatBody
-            messages={messages}
-            loading={loading}
-            input={input}
-            onInputChange={setInput}
-            onSend={sendMessage}
-            bottomRef={desktopBottomRef}
-            messagesAreaClassName={expanded ? "flex-1" : "max-h-64"}
-          />
-        )}
+        <ChatBody
+          messages={messages}
+          loading={loading}
+          input={input}
+          onInputChange={setInput}
+          onSend={sendMessage}
+          bottomRef={desktopBottomRef}
+          messagesAreaClassName="flex-1"
+        />
       </div>
+
+      {/* Desktop: floating bubble, toggles the popup panel above it. */}
+      <button
+        onClick={() => setDesktopOpen((o) => !o)}
+        aria-label={desktopOpen ? "Close chat" : "Open AI travel assistant"}
+        className={cn(
+          "relative items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg",
+          floating && "hidden md:flex fixed bottom-6 right-6 z-50 size-14"
+        )}
+      >
+        {desktopOpen ? (
+          <ChevronDown className="size-6 text-white" />
+        ) : (
+          <>
+            <MessageCircle className="size-6 text-white" />
+            {/* right-2 top-2, not the literal right-0 top-0 a "corner" dot
+                would suggest: on a rounded-full button the box corner sits
+                outside the visible circular face (a circle doesn't reach
+                its own bounding-box corners), so a dot placed there mostly
+                overlaps the page background instead of the button - same
+                fix already applied to the mobile bubble's dot below. */}
+            <span className="absolute right-2 top-2 size-3 rounded-full bg-red-500" />
+          </>
+        )}
+      </button>
 
       {/* Mobile: backdrop behind the bottom sheet, dismisses it on tap. */}
       {open && (
