@@ -308,13 +308,24 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
             which only shows up clearly on a wide solid band like this header. */}
         <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-3">
           {headerTitle}
-          <button
-            onClick={() => setExpanded((e) => !e)}
-            aria-label="Toggle fullscreen"
-            className="text-white/80 hover:text-white transition-colors"
-          >
-            {expanded ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
-          </button>
+          {/* Wrapper keeps both buttons grouped on the right, since the
+              header's justify-between would otherwise space three children. */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setExpanded((e) => !e)}
+              aria-label="Toggle fullscreen"
+              className="text-white/80 hover:text-white transition-colors"
+            >
+              {expanded ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+            </button>
+            <button
+              onClick={() => setDesktopOpen(false)}
+              aria-label="Close chat"
+              className="flex size-7 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/20"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
         </div>
 
         <ChatBody
