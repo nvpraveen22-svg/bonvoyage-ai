@@ -409,7 +409,10 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Minimize chat" : "Open AI travel assistant"}
-        className="fixed bottom-6 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg md:hidden"
+        className={cn(
+          "fixed bottom-6 right-4 z-50 size-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg md:hidden",
+          open ? "hidden" : "flex"
+        )}
       >
         {open ? (
           <ChevronDown className="size-6 text-white" />
