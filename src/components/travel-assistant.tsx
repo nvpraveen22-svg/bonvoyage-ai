@@ -357,7 +357,7 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
       {/* Mobile: backdrop behind the bottom sheet, dismisses it on tap. */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />
@@ -398,8 +398,7 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
           onInputChange={setInput}
           onSend={sendMessage}
           bottomRef={sheetBottomRef}
-          messagesAreaClassName="flex-1"
-          inputRowClassName="pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          inputRowClassName="mt-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         />
       </div>
 
