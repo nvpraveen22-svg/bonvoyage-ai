@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
   // this, so it stays a single awaited call rather than joining the
   // parallel batch.
   // ---------------------------------------------------------------------
-  const foundationPrompt = `You are a travel content expert building a destination guide for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const foundationPrompt = `You are a travel content expert building a destination guide for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Destination name: ${name}${stateHint ? `\nState: ${stateHint}` : "\n(Infer the correct real Indian state for this destination.)"}
 
@@ -464,23 +464,23 @@ Month names must be full English month names (e.g. "October"). Be realistic and 
   // that succeeded; each branch still goes through generateContentWithRetry
   // individually.
   // ---------------------------------------------------------------------
-  const attractionsPrompt = `You are a travel content expert for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const attractionsPrompt = `You are a travel content expert for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Generate up to 8 real, well-known attractions/sights near ${name}, ${finalState}, India, as a JSON object shaped { "attractions": [...] }. Only include genuinely real, notable attractions — fewer than 8 is fine if that's all that genuinely exist. All costs must be in Indian Rupees (numbers only, no currency symbols). Return ONLY the JSON object, no markdown, no explanation.`;
 
-  const hotelsPrompt = `You are a travel content expert for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const hotelsPrompt = `You are a travel content expert for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Generate up to 5 realistic hotels or stays in/near ${name}, ${finalState}, India, spanning budget to luxury, as a JSON object shaped { "hotels": [...] }. Set warning_flag true only if there's a genuine, common practical caveat for that property (e.g. remote location or seasonal closure), otherwise false with warning_reason as an empty string. All costs must be in Indian Rupees (numbers only, no currency symbols). Return ONLY the JSON object, no markdown, no explanation.`;
 
-  const activitiesPrompt = `You are a travel content expert for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const activitiesPrompt = `You are a travel content expert for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Generate up to 8 things travellers can do in/near ${name}, ${finalState}, India, as a JSON object shaped { "activities": [...] }. All costs must be in Indian Rupees (numbers only, no currency symbols). Return ONLY the JSON object, no markdown, no explanation.`;
 
-  const templesPrompt = `You are a travel content expert for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const templesPrompt = `You are a travel content expert for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Generate up to 5 temples at or near ${name}, ${finalState}, India — but ONLY temples that are genuinely famous at a district, state, or national level, as a JSON object shaped { "temples": [...] }. If ${name} has fewer than 5 such famous temples, return fewer (even zero) — do not invent or pad with generic/minor temples that aren't actually notable. For each temple set temple_stay_available honestly, and stay_details/stay_price_min/stay_price_max to empty string / 0 / 0 when no temple stay is offered. All costs must be in Indian Rupees (numbers only, no currency symbols). Return ONLY the JSON object, no markdown, no explanation.`;
 
-  const howToReachPrompt = `You are a travel content expert for TripSense AI, an Indian travel planning app used mainly by travellers from Hyderabad.
+  const howToReachPrompt = `You are a travel content expert for BonVoyage AI, an Indian travel planning app used mainly by travellers from Hyderabad.
 
 Generate exactly 4 entries, one each for mode "road", "train", "air", and "bus", describing how to reach ${name}, ${finalState} from Hyderabad specifically, as a JSON object shaped { "how_to_reach": [...] }. Use real highway/route references and real nearby airports/stations where possible. Return ONLY the JSON object, no markdown, no explanation.`;
 

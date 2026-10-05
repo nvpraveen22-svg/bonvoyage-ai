@@ -60,7 +60,7 @@ const SUGGESTIONS = [
 ];
 
 const GREETING =
-  "Hi! I'm your TripSense AI travel assistant 🧭 Ask me anything — nearby destinations, hidden gems, family trips, restaurants, hotels — I'll help you plan the perfect trip!";
+  "Hi! I'm your BonVoyage AI travel assistant 🧭 Ask me anything — nearby destinations, hidden gems, family trips, restaurants, hotels — I'll help you plan the perfect trip!";
 
 interface ChatBodyProps {
   messages: Message[];
@@ -276,7 +276,7 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
       <span className="text-2xl">🧭</span>
       <div>
         <h3 className="font-heading font-semibold text-white">
-          TripSense AI Assistant
+          BonVoyage AI Assistant
         </h3>
         <p className="text-xs text-white/80">
           {userLocation ? `📍 Detected: ${userLocation}` : "Ask me anything about travel in India"}

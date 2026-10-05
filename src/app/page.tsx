@@ -70,7 +70,7 @@ export default function Home() {
           </span>
           <div>
             <h1 className="font-heading text-lg font-semibold leading-tight text-foreground">
-              TripSense AI
+              BonVoyage AI
             </h1>
             <p className="text-xs text-muted-foreground">
               Smart trip planning for India

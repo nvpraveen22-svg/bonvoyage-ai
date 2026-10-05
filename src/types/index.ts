@@ -1,4 +1,4 @@
-// Core domain types for TripSense AI, mirroring the live Supabase schema.
+// Core domain types for BonVoyage AI, mirroring the live Supabase schema.
 
 export interface Destination {
   id: string;

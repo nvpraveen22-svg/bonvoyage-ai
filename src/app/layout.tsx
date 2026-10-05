@@ -10,9 +10,8 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "TripSense AI — Plan your India trip",
-  description:
-    "AI-powered travel planning for Indian destinations — attractions, temples, stays, budgets, and itineraries.",
+  title: "BonVoyage AI",
+  description: "Smart trip planning for India — BonVoyage AI",
 };
 
 export const viewport: Viewport = {

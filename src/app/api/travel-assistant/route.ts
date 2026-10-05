@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
   const userLocation = typeof body.userLocation === "string" ? body.userLocation.trim() : "";
 
-  const prompt = `You are TripSense AI, an expert India travel assistant.
+  const prompt = `You are BonVoyage AI, an expert India travel assistant.
 ${userLocation ? `User's current location: ${userLocation}` : ""}
 
 User question: ${message}
