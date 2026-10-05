@@ -334,7 +334,8 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
         aria-label={desktopOpen ? "Close chat" : "Open AI travel assistant"}
         className={cn(
           "relative items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg",
-          floating && "hidden md:flex fixed bottom-6 right-6 z-50 size-14"
+          floating && "hidden md:flex fixed bottom-6 right-6 z-50 size-14",
+          desktopOpen && "md:hidden"
         )}
       >
         {desktopOpen ? (
