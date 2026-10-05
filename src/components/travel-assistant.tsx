@@ -156,7 +156,7 @@ function ChatBody({
           placeholder="Ask about destinations, hotels, restaurants..."
           aria-label="Ask a travel question"
           disabled={loading}
-          className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-50"
+          className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2 text-base text-foreground outline-none md:text-sm focus:border-primary disabled:opacity-50"
         />
         <button
           onClick={() => onSend(input)}
