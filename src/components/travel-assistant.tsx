@@ -379,7 +379,7 @@ export function TravelAssistant({ floating = false }: TravelAssistantProps = {})
           a mount/unmount cut. */}
       <div
         className={cn(
-          "fixed inset-0 z-50 flex flex-col bg-background transition-transform duration-300 md:hidden",
+          "fixed inset-x-0 top-0 z-50 flex h-dvh flex-col bg-background transition-transform duration-300 md:hidden",
           open ? "translate-y-0" : "translate-y-full"
         )}
       >
